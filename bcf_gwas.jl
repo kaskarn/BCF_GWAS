@@ -27,7 +27,7 @@ function prep_gwas(phenpath, bcf, gwas, phen_id)
 end
 
 function prep_gwas(d::Dict)
-  prep_gwas(d["phepath"], d["vcfpath"], d["gwas"], d["phenid"])
+  prep_gwas(d["phepath"], d["bcf"], d["gwas"], d["phenid"])
 end
 
 function process_var_glm!(Xmat, y, dsvec, gind)

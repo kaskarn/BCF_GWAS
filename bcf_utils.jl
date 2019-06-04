@@ -13,6 +13,9 @@ mutable struct GWAS_variant
     b::Float64
     se::Float64
     p::Float64
+    n_aa::Float64
+    n_Aa::Float64
+    n_AA::Float64
     hwe::Float64
     sumr2::Float64
 end
@@ -128,16 +131,16 @@ end
 function print_header(io = stdout; sep = '\t', gwas = false, hwe = false, ldsc = false)
   join(io, ["VCF_ID", "CHROM", "POS", "REF", "ALT", "ALT_AF", "ALT_AC", "N_INFORMATIVE"], sep)
   gwas && join(io, ["", "BETA", "SE", "PVALUE"], sep)
-  hwe && write(io, "HWE_p")
+  hwe && join(io, ["", "N_aa", "N_aA", "N_AA", "HWE_p"], sep)
   ldsc && write(io, "LDSC")
   write(io, "\n")
 end
 
 
-function print(io, v::GWAS_variant; sep = '\t', gwas = false, hwe = false, ldsc = false)
+function print_bcf(io, v::GWAS_variant; sep = '\t', gwas = false, hwe = false, ldsc = false)
   join(io, [v.id, v.chrom, v.pos, v.ref, v.alt, v.caf, v.ac, v.n], sep)
   gwas && join(io, ["", v.b, v.se, v.p], sep)
-  hwe && join(io, ["", v.hwe], sep)
+  hwe && join(io, ["", v.hwe, v.N_aa, v.N_aA, v.N_AA], sep)
   ldsc && join(io, ["", v.sumr2], sep)
   write(io, '\n')
 end
