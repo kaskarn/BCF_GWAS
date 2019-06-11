@@ -1,3 +1,6 @@
+#Sets up GWAS objects
+prep_gwas(d::Dict) = prep_gwas(d["phepath"], d["bcf"], d["gwas"], d["phenid"])
+
 function prep_gwas(phenpath, bcf, gwas, phen_id)
   reader = BCF.Reader(open(bcf, "r"))
   pheno = CSV.File(String(phenpath); delim = '\t') |> DataFrame
@@ -26,8 +29,14 @@ function prep_gwas(phenpath, bcf, gwas, phen_id)
   return Xmat, y, vcfind
 end
 
-function prep_gwas(d::Dict)
-  prep_gwas(d["phepath"], d["bcf"], d["gwas"], d["phenid"])
+#Run GLM using GWAS_variant
+function process_var_glm!(v::GWAS_variant, Xmat, y)
+  Xmat[:,2] = v.ds
+
+  mnow = lm(Xmat[v.ind,:],y[v.ind])
+  v.b = coef(mnow)[2]
+  v.se = stderror(mnow)[2]
+  v.p = GLM.ccdf(GLM.FDist(1,GLM.dof_residual(mnow)),abs2(v.b/v.se))
 end
 
 function process_var_glm!(Xmat, y, dsvec, gind)
@@ -38,13 +47,4 @@ function process_var_glm!(Xmat, y, dsvec, gind)
   se = stderror(mnow)[2]
   p = GLM.ccdf(GLM.FDist(1,GLM.dof_residual(mnow)),abs2(b/se))
   return b, se, p
-end
-
-function process_var_glm!(v::GWAS_variant, Xmat, y)
-  Xmat[:,2] = v.ds
-
-  mnow = lm(Xmat[v.ind,:],y[v.ind])
-  v.b = coef(mnow)[2]
-  v.se = stderror(mnow)[2]
-  v.p = GLM.ccdf(GLM.FDist(1,GLM.dof_residual(mnow)),abs2(v.b/v.se))
 end

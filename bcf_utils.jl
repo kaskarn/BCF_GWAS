@@ -1,3 +1,4 @@
+#Stores variant information
 mutable struct GWAS_variant
     id::String
     id2::String
@@ -22,7 +23,8 @@ mutable struct GWAS_variant
     sumr2::Float64
 end
 
-function GWAS_variant(n)
+#constructor for GWAS variant with n samples
+function GWAS_variant(n::Int)
   varnow = GWAS_variant(
     "", "",
     zeros(Float64, 3, n), zeros(Float64, n), falses(n),
@@ -34,6 +36,8 @@ function GWAS_variant(n)
   )
 end
 
+#Translates leading bytes to type information
+#(for genotype2 function)
 function bcftype2(b::UInt8)
   b &= 0x0f #take right 4 bits
   t::DataType = b == 0x01 ? Int8 :
@@ -44,6 +48,8 @@ function bcftype2(b::UInt8)
   t
 end
 
+#Reworked GeneticVariation::genotype()
+#Pulls genotype information from BCF record
 function genotype2(record::GeneticVariation.BCF.Record, key::Integer)
     GeneticVariation.BCF.checkfilled(record)
     N = GeneticVariation.BCF.n_sample(record)
@@ -64,7 +70,9 @@ function genotype2(record::GeneticVariation.BCF.Record, key::Integer)
     throw(KeyError(key))
 end
 
-
+#Reworked version of GeneticVariation::genotype()
+#Pulls genotype information from BCF record
+#Stores into pre-allocated matrix
 function genotype2!(record::GeneticVariation.BCF.Record, key::Integer, vals::Array)
     GeneticVariation.BCF.checkfilled(record)
     N = GeneticVariation.BCF.n_sample(record)
@@ -85,6 +93,9 @@ function genotype2!(record::GeneticVariation.BCF.Record, key::Integer, vals::Arr
     throw(KeyError(key))
 end
 
+#Finds the key index corresponding to the desired BCF format field.
+#Most likely, the desired field is GP or DS, but the order can change
+#from file to file
 function bcf_findkey(reader, s::String)
   h = header(reader)
   format_ind = filter(x->metainfotag(h.metainfo[x])=="FORMAT", eachindex(h.metainfo))
@@ -93,6 +104,7 @@ function bcf_findkey(reader, s::String)
   parse(Int, gp_key_s)
 end
 
+#Creates needed preallocated vectors, and objects
 function prep_run(bcf::AbstractString, vcfind::Vector{Int})
   reader = BCF.Reader(open(bcf, "r"))
   v = read(reader)
@@ -102,6 +114,7 @@ function prep_run(bcf::AbstractString, vcfind::Vector{Int})
   return BCF.Reader(open(bcf, "r")), key, vec, GWAS_variant(length(vcfind))
 end
 
+#Loads variant from BCF file into a pre-allocated GWAS_variant object
 function load_bcf_variant!(v::GWAS_variant, vec, vcfnow, key, vcfind)
   genotype2!(vcfnow, key, vec)
   v.n, v.ac = 0, 0.0
@@ -125,7 +138,7 @@ function load_bcf_variant!(v::GWAS_variant, vec, vcfnow, key, vcfind)
   v.ref = BCF.ref(vcfnow)
   v.alt = BCF.alt(vcfnow)[1]
   v.qual = BCF.qual(vcfnow)
-  
+
   #init GLM results
   v.b = NaN
   v.se = NaN
@@ -141,7 +154,8 @@ function load_bcf_variant!(v::GWAS_variant, vec, vcfnow, key, vcfind)
   0.
 end
 
-function print_header(io = stdout; sep = '\t', gwas = false, hwe = false, ldsc = false)
+#Print header of results file
+function print_header(io = stdout; sep = '\t', gwas = true, hwe = true, ldsc = false)
   join(io, ["VCF_ID", "ID2", "CHROM", "POS", "REF", "ALT", "ALT_AF", "ALT_AC", "N_INFORMATIVE", "QUAL"], sep)
   gwas && join(io, ["", "BETA", "SE", "PVALUE"], sep)
   hwe && join(io, ["", "N_aa", "N_Aa", "N_AA", "HWE_p"], sep)
@@ -149,8 +163,8 @@ function print_header(io = stdout; sep = '\t', gwas = false, hwe = false, ldsc =
   write(io, "\n")
 end
 
-
-function print_bcf(io, v::GWAS_variant; sep = '\t', gwas = false, hwe = false, ldsc = false)
+#Write variant to file
+function print_bcf(io, v::GWAS_variant; sep = '\t', gwas = true, hwe = true, ldsc = false)
   join(io, [v.id, v.id2, v.chrom, v.pos, v.ref, v.alt, v.caf, v.ac, v.n, v.qual], sep)
   gwas && join(io, ["", v.b, v.se, v.p], sep)
   hwe && join(io, ["", v.n_aa, v.n_Aa, v.n_AA, v.hwe], sep)
