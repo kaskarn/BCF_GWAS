@@ -7,6 +7,9 @@ function process_bcf(incmd)
   run_ldsc = haskey(pinputs, "ldsc")
   bcflist = get_bcflist(pinputs["bcf"])
 
+  out = open(pinputs["outfile"], "w")
+  print_header(out; sep = '\t', ldsc = run_ldsc)
+
   println(bcflist)
   for bcf in bcflist
     println("Now processing $bcf")
@@ -16,11 +19,8 @@ function process_bcf(incmd)
     var_deque = Deque{GWAS_variant}()
     var_deque_lowmaf = Deque{GWAS_variant}()
 
-    out = open(pinputs["outfile"], "w+")
-    print_header(out; sep = '\t', ldsc = run_ldsc)
-
-    i = pinputs["test"] ? 10000 : -1
-    @time for vcfnow in reader
+    i = pinputs["test"] ? 20000 : -1
+    for vcfnow in reader
       load_bcf_variant!(varnow, vec, vcfnow, key, vcfind)
       (0.01 < varnow.caf < 0.99) && process_var_glm!(varnow, Xmat, y)
       process_var_hwe!(varnow, vcfind)
@@ -29,6 +29,7 @@ function process_bcf(incmd)
       else
           print_bcf(out, varnow, sep = '\t', ldsc = run_ldsc)
       end
+      i % 1000 == 0 && println("$(-i); deque: $(length(var_deque))") #for testing
       i -= 1
       i == 0 && break
     end

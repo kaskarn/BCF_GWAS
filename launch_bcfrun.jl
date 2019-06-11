@@ -13,8 +13,8 @@ using   GeneticVariation, TableReader,
         Distributions, DataFrames,
         DataStructures, Distributions
 
-include(Base.source_dir()*"/cmd_parse.jl")
 include(Base.source_dir()*"/bcf_utils.jl")
+include(Base.source_dir()*"/cmd_parse.jl")
 include(Base.source_dir()*"/bcf_gwas.jl")
 include(Base.source_dir()*"/bcf_hwe.jl")
 include(Base.source_dir()*"/bcf_ldsc.jl")

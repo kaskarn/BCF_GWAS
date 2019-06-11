@@ -21,6 +21,7 @@ mutable struct GWAS_variant
     n_AA::Float64
     hwe::Float64
     sumr2::Float64
+    v::Float64
 end
 
 #constructor for GWAS variant with n samples
@@ -32,7 +33,7 @@ function GWAS_variant(n::Int)
     -1, NaN, NaN, #alleles N
     NaN, NaN, NaN, #gwas
     NaN, NaN, NaN, NaN, #hwe
-    NaN
+    NaN, NaN
   )
 end
 
@@ -44,7 +45,7 @@ function Base.copy(var::GWAS_variant)
     var.n, var.ac, var.caf,
     var.b, var.se, var.p,
     var.n_aa, var.n_Aa, var.n_AA, var.hwe,
-    var.sumr2)
+    var.sumr2, var.v)
 end
 
 #Translates leading bytes to type information
@@ -129,6 +130,7 @@ end
 function load_bcf_variant!(v::GWAS_variant, vec, vcfnow, key, vcfind)
   genotype2!(vcfnow, key, vec)
   v.n, v.ac = 0, 0.0
+  ds_ss = 0.0
   @inbounds for (i, k) in enumerate(vcfind)
     v.pg[:,i] = vec[:,k]
     ds = v.pg[2,i] + 2*v.pg[3,i]
@@ -137,9 +139,11 @@ function load_bcf_variant!(v::GWAS_variant, vec, vcfnow, key, vcfind)
     if v.ind[i]
       v.n += 1
       v.ac += ds
+      ds_ss += ds*ds
     end
   end
   v.caf = v.ac/v.n
+  v.v = ds_ss/v.n - v.caf*v.caf
 
   #init variant info
   v.id = BCF.id(vcfnow)
