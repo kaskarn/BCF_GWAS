@@ -36,6 +36,17 @@ function GWAS_variant(n::Int)
   )
 end
 
+function Base.copy(var::GWAS_variant)
+    GWAS_variant(
+    var.id, var.id2,
+    copy(var.pg), copy(var.ds), copy(var.ind),
+    var.chrom, var.pos, var.ref, var.alt, var.qual,
+    var.n, var.ac, var.caf,
+    var.b, var.se, var.p,
+    var.n_aa, var.n_Aa, var.n_AA, var.hwe,
+    var.sumr2)
+end
+
 #Translates leading bytes to type information
 #(for genotype2 function)
 function bcftype2(b::UInt8)
@@ -145,7 +156,7 @@ function load_bcf_variant!(v::GWAS_variant, vec, vcfnow, key, vcfind)
   v.p = NaN
 
   #init LDS results
-  v.sumr2 = 0.
+  v.sumr2 = NaN
 
   #init HWE results
   v.hwe = NaN
