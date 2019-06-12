@@ -82,7 +82,7 @@ function process_var_ldsc!(varnow, vardeque, out; win=1000000)
 
         #Update variant R2
         if 0.05 < varnow.caf < 0.95
-            ldsc_update_r2!(vardeque, varnow, varnow.pos)
+            ldsc_update_r2!(vardeque, varnow)
         end
     end
     push!(vardeque, copy(varnow))

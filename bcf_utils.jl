@@ -142,7 +142,7 @@ function load_bcf_variant!(v::GWAS_variant, vec, vcfnow, key, vcfind)
       ds_ss += ds*ds
     end
   end
-  v.caf = v.ac/v.n
+  v.caf = v.ac/v.n/2
   v.v = ds_ss/v.n - v.caf*v.caf
 
   #init variant info
