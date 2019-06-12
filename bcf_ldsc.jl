@@ -58,14 +58,14 @@ end
 
 #Clear deque variants outside window
 function ldsc_update_deque_window!(out, vardeque, pos_now; win=1000000)
-    while front(vardeque).pos + win < pos_now
+    while !isempty(vardeque) && (front(vardeque).pos + win < pos_now)
         print_bcf(out, popfirst!(vardeque); ldsc = true)
     end
     return 0
 end
 #Fully clear deque of variants
 function ldsc_clear_deque!(out, vardeque)
-    @inbounds for i in 1:length(vardeque)
+    while !isempty(vardeque)
     	print_bcf(out, popfirst!(vardeque); ldsc = true)
     end
     return 0
@@ -81,9 +81,7 @@ function process_var_ldsc!(varnow, vardeque, out; win=1000000)
         ldsc_update_deque_window!(out, vardeque, varnow.pos)
 
         #Update variant R2
-        if 0.05 < varnow.caf < 0.95
-            ldsc_update_r2!(vardeque, varnow)
-        end
+        ldsc_update_r2!(vardeque, varnow)
     end
     push!(vardeque, copy(varnow))
 

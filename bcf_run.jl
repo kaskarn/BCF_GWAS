@@ -20,8 +20,15 @@ function process_bcf(incmd)
     # var_deque_lowmaf = Deque{GWAS_variant}()
 
     i = haskey(pinputs, "test") ? 20000 : -1
+    
+    #crappy temporary solution to find chromosome # from contig field
+    h = header(reader)
+    chloc = filter(x->metainfotag(h.metainfo[x])=="contig", eachindex(h.metainfo))[1]
+    chrnow = Int(h.metainfo[chloc].data[h.metainfo[chloc].dictval[1]][1] - 0x30)
+    
     for vcfnow in reader
       load_bcf_variant!(varnow, vec, vcfnow, key, vcfind)
+      varnow.chrom = chrnow #overwrites incorrect chromosome number
       (0.01 < varnow.caf < 0.99) && process_var_glm!(varnow, Xmat, y)
       process_var_hwe!(varnow, vcfind)
       if run_ldsc && (0.05 < varnow.caf < 0.95) 
