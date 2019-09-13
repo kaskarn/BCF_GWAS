@@ -22,7 +22,8 @@ prep_gwas(d::Dict) = prep_gwas(d["phepath"], d["bcf"], d["gwas"], d["phenid"])
 # end
 
 function prep_gwas(
-    phenpath, bcf, gwas, phen_id, fam_id = phen_id;
+    phenpath, bcf, gwas, phen_id,
+    fam_id = phen_id;
     model = fam_id == phen_id ? LinearModel : LinearMixedModel
 )
 
@@ -83,7 +84,7 @@ function prep_gwas(
   optsum = OptSummary(1.0, 0.0, :LN_BOBYQA, ftol_rel = T(1.0e-12), ftol_abs = T(1.0e-8))
 
   #no ReMat to set if Linear Model
-  (model == LinearModel) && return feterms, reterms, A, L, optsum
+  (model == LinearModel) && return vcfind, feterms, reterms, A, L, optsum
 
   #Else, finish setup
   for j in 1:k
@@ -105,7 +106,7 @@ function prep_gwas(
       end
   end
 
-  return feterms, reterms, A, L, optsum
+  return vcfind, feterms, reterms, A, L, optsum
 
 end
 
