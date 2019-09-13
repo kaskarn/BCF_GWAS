@@ -3,7 +3,7 @@ using Pkg
 #Checks all the required packages are installed
 function checkInstall()
     mypkg = Pkg.installed()
-    pkgs = ["GeneticVariation" "TableReader" "CSV" "GLM" "Distributions" "DataFrames" "DataStructures"]
+    pkgs = ["GeneticVariation" "TableReader" "CSV" "GLM" "Distributions" "DataFrames" "DataStructures" "MixedModels" "StatsModels" "BlockArrays"]
     [ Pkg.add(p) for p in filter(x->!haskey(mypkg, x), pkgs) ]
 end
 checkInstall()
@@ -11,7 +11,8 @@ checkInstall()
 using   GeneticVariation, TableReader,
         CSV, GLM,
         Distributions, DataFrames,
-        DataStructures, Distributions
+        DataStructures, Distributions,
+        MixedModels, StatsModels, BlockArrays
 
 include(Base.source_dir()*"/bcf_utils.jl")
 include(Base.source_dir()*"/cmd_parse.jl")
