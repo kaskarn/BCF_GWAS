@@ -1,2 +1,3 @@
+test/*.txt
+test/*.bcf.gz
 devtests.jl
-test*
