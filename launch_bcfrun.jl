@@ -14,12 +14,12 @@ using   GeneticVariation, TableReader,
         DataStructures, Distributions,
         MixedModels, StatsModels, BlockArrays
 
-include(Base.source_dir()*"/bcf_utils.jl")
-include(Base.source_dir()*"/cmd_parse.jl")
-include(Base.source_dir()*"/bcf_gwas.jl")
-include(Base.source_dir()*"/bcf_hwe.jl")
-include(Base.source_dir()*"/bcf_ldsc.jl")
-include(Base.source_dir()*"/bcf_run.jl")
+include(Base.source_dir()*"/src/bcf_utils.jl")
+include(Base.source_dir()*"/src/cmd_parse.jl")
+include(Base.source_dir()*"/src/bcf_gwas.jl")
+include(Base.source_dir()*"/src/bcf_hwe.jl")
+include(Base.source_dir()*"/src/bcf_ldsc.jl")
+include(Base.source_dir()*"/src/bcf_run.jl")
 
 println("\nCOMMAND:")
 println(join(ARGS, " "))

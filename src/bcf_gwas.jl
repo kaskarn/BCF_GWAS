@@ -9,9 +9,8 @@ function prep_gwas(
     fam_id = phen_id;
     model = fam_id == phen_id ? LinearModel : LinearMixedModel
 )
-
   reader = BCF.Reader(open(bcf, "r"))
-  pheno = CSV.File(String(phenpath); delim = '\t') |> DataFrame
+  pheno = CSV.File(String(phenpath); delim = '\t', missingstring = "NA") |> DataFrame
 
   vcfids = DataFrame(id_rdy = reader.header.sampleID, ind = 1:length(reader.header.sampleID))
   close(reader)
@@ -19,14 +18,16 @@ function prep_gwas(
   rename!(pheno, Symbol(phen_id) => :id_rdy)
   vcf_phen = join(pheno, vcfids, on = :id_rdy, kind = :inner)
   sort!(vcf_phen , order(:ind))
-  vcfind = vcf_phen[:ind]
 
   lhs_s, rhs_s = split(gwas, '=')
-  model == LinearMixedModel && (rhs_s = rhs_s*"+(1|"*fam_id*")")
-  rhs_s="G+"*rhs_s
-  lhs = Symbol(lhs_s)
-  formula = eval(Meta.parse("@formula $lhs ~ $rhs_s"))
-  vcf_phen[:G] = randn(size(vcf_phen,1))
+  [ dropmissing!(vcf_phen, Symbol(x), disallowmissing=true) for x in split(rhs_s, "+") ]
+  dropmissing!(vcf_phen, Symbol(lhs_s), disallowmissing=true)
+  if model == LinearMixedModel
+      rhs_s = rhs_s*"+(1|"*fam_id*")"
+      categorical!(vcf_phen, Symbol(fam_id))
+  end
+  formula = eval(Meta.parse("@formula $lhs_s ~ G + $rhs_s"))
+  vcf_phen[!, :G] = randn(size(vcf_phen,1))
 
   #Below adapted from MixedModels source code
   #originally by Douglas Bates
@@ -35,7 +36,7 @@ function prep_gwas(
   y, Xs = StatsModels.modelcols(form, vcf_phen)
   y = reshape(float(y), (:, 1)) # y as a floating-point matrix
 
-
+  vcfind = vcf_phen[!, :ind]
   return vcfind, Xs, y, form
 end
 

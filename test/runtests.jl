@@ -32,7 +32,7 @@ println("Now processing $bcf")
 
 d = pinputs
 # phenpath, bcf, gwas, phen_id = d["phepath"], d["bcf"], d["gwas"], d["phenid"]
-
+# fam_id = "analysis_fid"
 vcfind, Xs, y, form = prep_gwas(pinputs)
 reader, key, vec, varnow = prep_run(bcf, vcfind)
 var_deque = Deque{GWAS_variant}()
