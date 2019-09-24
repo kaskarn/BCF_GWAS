@@ -5,7 +5,7 @@ mutable struct GWAS_variant
     pg::Matrix{Float64}
     ds::Vector{Float64}
     ind::BitArray{1}
-    chrom::Int64
+    chrom::String
     pos::Int64
     ref::String
     alt::String
@@ -29,7 +29,7 @@ function GWAS_variant(n::Int)
   varnow = GWAS_variant(
     "", "",
     zeros(Float64, 3, n), zeros(Float64, n), falses(n),
-    -1, -1, "", "", NaN,
+    "", -1, "", "", NaN,
     -1, NaN, NaN, #alleles N
     NaN, NaN, NaN, #gwas
     NaN, NaN, NaN, NaN, #hwe
@@ -147,9 +147,10 @@ function load_bcf_variant!(v::GWAS_variant, vec, vcfnow, key, vcfind)
 
   #init variant info
   v.id = BCF.id(vcfnow)
-  v.id2 = BCF.info(vcfnow)[1][2]
+  # v.id2 = BCF.info(vcfnow)[1][2]
+  v.id2 = ""
   v.pos = BCF.pos(vcfnow)
-  v.chrom = BCF.chrom(vcfnow)
+  v.chrom = ""
   v.ref = BCF.ref(vcfnow)
   v.alt = BCF.alt(vcfnow)[1]
   v.qual = BCF.qual(vcfnow)

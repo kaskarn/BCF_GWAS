@@ -27,7 +27,7 @@ function prep_gwas(
       categorical!(vcf_phen, Symbol(fam_id))
   end
   formula = eval(Meta.parse("@formula $lhs_s ~ G + $rhs_s"))
-  vcf_phen[!, :G] = randn(size(vcf_phen,1))
+  vcf_phen.G = randn(size(vcf_phen,1))
 
   #Below adapted from MixedModels source code
   #originally by Douglas Bates
@@ -36,7 +36,7 @@ function prep_gwas(
   y, Xs = StatsModels.modelcols(form, vcf_phen)
   y = reshape(float(y), (:, 1)) # y as a floating-point matrix
 
-  vcfind = vcf_phen[!, :ind]
+  vcfind = vcf_phen.ind
   return vcfind, Xs, y, form
 end
 
