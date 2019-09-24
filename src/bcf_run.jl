@@ -34,7 +34,7 @@ function process_bcf(incmd)
         varnow.chrom = chrnow #overwrites incorrect chromosome number
         if 0.001 < varnow.caf < 0.999
             if islmm
-                process_var_lmm!(Xs, y, form)
+                process_var_lmm!(varnow, Xs, y, form)
             else
                 process_var_glm!(varnow, Xmat, y)
             end

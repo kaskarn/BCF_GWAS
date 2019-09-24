@@ -1,3 +1,4 @@
 test/*.txt
 test/*.bcf.gz
 devtests.jl
+invn*

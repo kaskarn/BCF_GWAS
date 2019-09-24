@@ -12,7 +12,8 @@ using   GeneticVariation, TableReader,
         CSV, GLM,
         Distributions, DataFrames,
         DataStructures, Distributions,
-        MixedModels, StatsModels, BlockArrays
+        MixedModels, StatsModels, BlockArrays,
+        LinearAlgebra
 
 include(Base.source_dir()*"/src/bcf_utils.jl")
 include(Base.source_dir()*"/src/cmd_parse.jl")
