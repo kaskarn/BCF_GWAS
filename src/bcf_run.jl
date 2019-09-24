@@ -11,11 +11,12 @@ function process_bcf(incmd)
   out = open(pinputs["outfile"], "w")
   print_header(out; sep = '\t', ldsc = run_ldsc)
 
+  print("\n\n")
   println(bcflist)
   for bcf in bcflist
     println("Now processing $bcf")
 
-    vcfind, Xs, y, form = prep_gwas(pinputs)
+    vcfind, Xs, y, form = prep_gwas(pinputs, bcf)
     reader, key, vec, varnow = prep_run(bcf, vcfind)
     var_deque = Deque{GWAS_variant}()
     # var_deque_lowmaf = Deque{GWAS_variant}()
@@ -36,11 +37,11 @@ function process_bcf(incmd)
             if islmm
                 process_var_lmm!(varnow, Xs, y, form)
             else
-                process_var_glm!(varnow, Xmat, y)
+                process_var_glm!(varnow, Xs, y)
             end
         end
         process_var_hwe!(varnow, vcfind)
-        if run_ldsc && (0.05 < varnow.caf < 0.95)
+        if run_ldsc && (0.01 < varnow.caf < 0.99)
           process_var_ldsc!(varnow, var_deque, out) ## WIP
         else
           print_bcf(out, varnow, sep = '\t', ldsc = run_ldsc)

@@ -4,6 +4,11 @@ prep_gwas(d::Dict) = prep_gwas(
     get(d, "famid", d["phenid"])
 )
 
+prep_gwas(d::Dict, bcf::String) = prep_gwas(
+    d["phepath"], bcf, d["gwas"], d["phenid"],
+    get(d, "famid", d["phenid"])
+)
+
 function prep_gwas(
     phenpath, bcf, gwas, phen_id,
     fam_id = phen_id;
@@ -22,6 +27,7 @@ function prep_gwas(
   lhs_s, rhs_s = split(gwas, '=')
   [ dropmissing!(vcf_phen, Symbol(x), disallowmissing=true) for x in split(rhs_s, "+") ]
   dropmissing!(vcf_phen, Symbol(lhs_s), disallowmissing=true)
+  dropmissing!(vcf_phen, :ind, disallowmissing=true)
   if model == LinearMixedModel
       rhs_s = rhs_s*"+(1|"*fam_id*")"
       categorical!(vcf_phen, Symbol(fam_id))
