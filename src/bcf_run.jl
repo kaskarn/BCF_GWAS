@@ -25,8 +25,9 @@ function process_bcf(incmd)
     #crappy temporary solution to find chromosome # from contig field
     h = header(reader)
     chloc = filter(x->metainfotag(h.metainfo[x])=="contig", eachindex(h.metainfo))[1]
-    charr = Int.(h.metainfo[chloc].data[h.metainfo[chloc].dictval[1]] .- 0x30)
-    chrnow = sum([10^(i-1)*charr[i] for i in reverse(eachindex(charr))])
+    charr = Char.(h.metainfo[chloc].data[h.metainfo[chloc].dictval[1]])
+    # chrnow = sum([10^(i-1)*charr[i] for i in reverse(eachindex(charr))])
+    chrnow = String(charr)
 
     for vcfnow in reader
         load_bcf_variant!(varnow, vec, vcfnow, key, vcfind)
