@@ -10,12 +10,14 @@ mutable struct GWAS_variant
     ref::String
     alt::String
     qual::Float64
+    certainty::Float64
     n::Int64
     ac::Float64
     caf::Float64
     b::Float64
     se::Float64
     p::Float64
+    lmm_conv::Int64
     n_aa::Float64
     n_Aa::Float64
     n_AA::Float64
@@ -29,9 +31,9 @@ function GWAS_variant(n::Int)
   varnow = GWAS_variant(
     "", "",
     zeros(Float64, 3, n), zeros(Float64, n), falses(n),
-    "", -1, "", "", NaN,
+    "", -1, "", "", NaN, NaN,
     -1, NaN, NaN, #alleles N
-    NaN, NaN, NaN, #gwas
+    NaN, NaN, NaN, -1, #gwas
     NaN, NaN, NaN, NaN, #hwe
     NaN, NaN
   )
@@ -41,9 +43,9 @@ function Base.copy(var::GWAS_variant)
     GWAS_variant(
     var.id, var.id2,
     copy(var.pg), copy(var.ds), copy(var.ind),
-    var.chrom, var.pos, var.ref, var.alt, var.qual,
+    var.chrom, var.pos, var.ref, var.alt, var.qual, var.certainty,
     var.n, var.ac, var.caf,
-    var.b, var.se, var.p,
+    var.b, var.se, var.p, var.lmm_conv,
     var.n_aa, var.n_Aa, var.n_AA, var.hwe,
     var.sumr2, var.v)
 end
@@ -129,7 +131,7 @@ end
 #Loads variant from BCF file into a pre-allocated GWAS_variant object
 function load_bcf_variant!(v::GWAS_variant, vec, vcfnow, key, vcfind)
   genotype2!(vcfnow, key, vec)
-  v.n, v.ac = 0, 0.0
+  v.n, v.ac, v.certainty, v.qual = 0, 0.0, 0.0, 0.0
   ds_ss = 0.0
   @inbounds for (i, k) in enumerate(vcfind)
     v.pg[:,i] = vec[:,k]
@@ -137,23 +139,25 @@ function load_bcf_variant!(v::GWAS_variant, vec, vcfnow, key, vcfind)
     v.ds[i] = ds
     v.ind[i] = !isnan(ds) #missing BCF2 standard
     if v.ind[i]
-      v.n += 1
-      v.ac += ds
-      ds_ss += ds*ds
+        v.certainty += maximum(v.pg[:,i])
+        v.n += 1
+        v.ac += ds
+        ds_ss += ds*ds
     end
   end
+
   v.caf = v.ac/v.n/2
   v.v = ds_ss/v.n - v.caf*v.caf
+  v.certainty = v.certainty/v.n
 
   #init variant info
   v.id = BCF.id(vcfnow)
   # v.id2 = BCF.info(vcfnow)[1][2]
   v.id2 = ""
   v.pos = BCF.pos(vcfnow)
-  v.chrom = ""
   v.ref = BCF.ref(vcfnow)
   v.alt = BCF.alt(vcfnow)[1]
-  v.qual = BCF.qual(vcfnow)
+  v.qual = v.v / (2*v.caf*(1-v.caf))
 
   #init GLM results
   v.b = NaN
@@ -171,18 +175,20 @@ function load_bcf_variant!(v::GWAS_variant, vec, vcfnow, key, vcfind)
 end
 
 #Print header of results file
-function print_header(io = stdout; sep = '\t', gwas = true, hwe = true, ldsc = false)
-  join(io, ["VCF_ID", "ID2", "CHROM", "POS", "REF", "ALT", "ALT_AF", "ALT_AC", "N_INFORMATIVE", "QUAL"], sep)
+function print_header(io = stdout; sep = '\t', gwas = true, hwe = true, ldsc = false, lmm = false)
+  join(io, ["VCF_ID", "CHROM", "POS", "REF", "ALT", "ALT_AF", "ALT_AC", "N_INFORMATIVE", "QUAL", "ID2"], sep)
   gwas && join(io, ["", "BETA", "SE", "PVALUE"], sep)
-  hwe && join(io, ["", "N_aa", "N_Aa", "N_AA", "HWE_p"], sep)
+  lmm && write(io, "LMM_CONV")
+  hwe && join(io, ["", "N_aa", "N_Aa", "N_AA", "HWE_PVALUE"], sep)
   ldsc && join(io, ["", "LDSC"], sep)
   write(io, "\n")
 end
 
 #Write variant to file
 function print_bcf(io, v::GWAS_variant; sep = '\t', gwas = true, hwe = true, ldsc = false)
-  join(io, [v.id, v.id2, v.chrom, v.pos, v.ref, v.alt, v.caf, v.ac, v.n, v.qual], sep)
+  join(io, [v.id, v.chrom, v.pos, v.ref, v.alt, v.caf, v.ac, v.n, v.qual, v.id2], sep)
   gwas && join(io, ["", v.b, v.se, v.p], sep)
+  lmm && join(io, ["", v.lmm_conv], sep)
   hwe && join(io, ["", v.n_aa, v.n_Aa, v.n_AA, v.hwe], sep)
   ldsc && join(io, ["", v.sumr2], sep)
   write(io, '\n')

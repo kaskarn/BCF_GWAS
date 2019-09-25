@@ -1,11 +1,9 @@
 #Sets up GWAS objects
-prep_gwas(d::Dict) = prep_gwas(
-    d["phepath"], d["bcf"], d["gwas"], d["phenid"],
-    get(d, "famid", d["phenid"])
-)
-
-prep_gwas(d::Dict, bcf::String) = prep_gwas(
-    d["phepath"], bcf, d["gwas"], d["phenid"],
+prep_gwas(d::Dict, bcf::AbstractString) = prep_gwas(
+    get(d, "phepath", ""),
+    bcf,
+    get(d, "gwas", ""),
+    get(d, "phenid", ""),
     get(d, "famid", d["phenid"])
 )
 
@@ -14,36 +12,41 @@ function prep_gwas(
     fam_id = phen_id;
     model = fam_id == phen_id ? LinearModel : LinearMixedModel
 )
+  #get bcf file IDs
   reader = BCF.Reader(open(bcf, "r"))
-  pheno = CSV.File(String(phenpath); delim = '\t', missingstring = "NA") |> DataFrame
-
-  vcfids = DataFrame(id_rdy = reader.header.sampleID, ind = 1:length(reader.header.sampleID))
+  bcfids = reader.header.sampleID
   close(reader)
+  bcf_n = length(bcfids)
+  vcfids = DataFrame(id_rdy = bcfids, ind = 1:bcf_n)
 
+  #align phenotype and gwas file
+  pheno = CSV.File(String(phenpath); delim = '\t', missingstring = "NA") |> DataFrame
   rename!(pheno, Symbol(phen_id) => :id_rdy)
   vcf_phen = join(pheno, vcfids, on = :id_rdy, kind = :inner)
   sort!(vcf_phen , order(:ind))
 
-  lhs_s, rhs_s = split(gwas, '=')
-  [ dropmissing!(vcf_phen, Symbol(x), disallowmissing=true) for x in split(rhs_s, "+") ]
-  dropmissing!(vcf_phen, Symbol(lhs_s), disallowmissing=true)
-  dropmissing!(vcf_phen, :ind, disallowmissing=true)
-  if model == LinearMixedModel
-      rhs_s = rhs_s*"+(1|"*fam_id*")"
-      categorical!(vcf_phen, Symbol(fam_id))
+  isempty(gwas) && return vcf_phen.ind, [0. 0.], [0.], ""
+  if gwas != ""
+      lhs_s, rhs_s = split(gwas, '=')
+      [ dropmissing!(vcf_phen, Symbol(x), disallowmissing=true) for x in split(rhs_s, "+") ]
+      dropmissing!(vcf_phen, Symbol(lhs_s), disallowmissing=true)
+      dropmissing!(vcf_phen, :ind, disallowmissing=true)
+      if model == LinearMixedModel
+          rhs_s = rhs_s*"+(1|"*fam_id*")"
+          categorical!(vcf_phen, Symbol(fam_id))
+      end
+      formula = eval(Meta.parse("@formula $lhs_s ~ G + $rhs_s"))
+      vcf_phen.G = randn(size(vcf_phen,1))
+
+      #Below adapted from MixedModels source code
+      #originally by Douglas Bates
+
+      form = apply_schema(formula, schema(formula, vcf_phen), model)
+      y, Xs = StatsModels.modelcols(form, vcf_phen)
+      y = reshape(float(y), (:, 1)) # y as a floating-point matrix
   end
-  formula = eval(Meta.parse("@formula $lhs_s ~ G + $rhs_s"))
-  vcf_phen.G = randn(size(vcf_phen,1))
 
-  #Below adapted from MixedModels source code
-  #originally by Douglas Bates
-
-  form = apply_schema(formula, schema(formula, vcf_phen), model)
-  y, Xs = StatsModels.modelcols(form, vcf_phen)
-  y = reshape(float(y), (:, 1)) # y as a floating-point matrix
-
-  vcfind = vcf_phen.ind
-  return vcfind, Xs, y, form
+  return vcf_phen, vcf_phen.ind, Xs, y, form
 end
 
 function process_var_lmm!(v::GWAS_variant, Xs, y, form, wts = [])
@@ -91,13 +94,15 @@ function process_var_lmm!(v::GWAS_variant, Xs, y, form, wts = [])
     end
     lbd = foldl(vcat, lowerbd(c) for c in reterms)
     θ = foldl(vcat, MixedModels.getθ(c) for c in reterms)
-    optsum = OptSummary(θ, lbd, :LN_BOBYQA, ftol_rel = T(1.0e-12), ftol_abs = T(1.0e-8))
+    optsum = OptSummary([1.], lbd, :LN_BOBYQA, ftol_rel = T(1.0e-12), ftol_abs = T(1.0e-8))
     fill!(optsum.xtol_abs, 1.0e-10)
+
     mnow = fit!(LinearMixedModel(form, reterms, feterms, sqrt.(convert(Vector{T}, wts)), A, L, optsum))
     v.b = fixef(mnow)[2]
     v.se = sqrt(vcov(mnow)[2,2])
     v.p = GLM.ccdf(GLM.FDist(1,GLM.dof_residual(mnow)),abs2(v.b/v.se))
-    v.b, v.se, v.p
+    v.lmm_conv = Int(mnow.optsum.returnvalue == :SUCCESS)
+    v.b, v.se, v.p, v.lmm_conv
 end
 
 #Run GLM using GWAS_variant
